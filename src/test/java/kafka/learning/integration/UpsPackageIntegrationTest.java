@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import kafka.learning.config.UpsPackageConfig;
+import kafka.learning.model.UpsMail;
 import kafka.learning.model.UpsPackage;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +31,8 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest(classes = UpsPackageConfig.class)
 @ActiveProfiles("test")
 //@EmbeddedKafka(controlledShutdown = true)
-@EmbeddedKafka(controlledShutdown = true,topics = {"small.truck", "large.truck", "package.for.delivery"})
+@EmbeddedKafka(controlledShutdown = true, topics = {"small.truck", "large.truck",
+    "package.for.delivery", "mail.box"})
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 @Slf4j
 class UpsPackageIntegrationTest {
@@ -38,6 +40,7 @@ class UpsPackageIntegrationTest {
   private static final String PACKAGE_FOR_DELIVERY = "package.for.delivery";
   private static final String SMALL_TRUCK = "small.truck";
   private static final String LARGE_TRUCK = "large.truck";
+  private static final String MAIL_BOX = "mail.box";
 
 
   @Autowired
@@ -67,6 +70,7 @@ class UpsPackageIntegrationTest {
 
     AtomicInteger smallTruckCounter = new AtomicInteger(0);
     AtomicInteger largeTruckCounter = new AtomicInteger(0);
+    AtomicInteger mailBoxCounter = new AtomicInteger(0);
 
     @KafkaListener(groupId = "KafkaIntegrationTest", topics = SMALL_TRUCK)
     void receiveSmallTruck(@Payload UpsPackage payload) {
@@ -82,12 +86,20 @@ class UpsPackageIntegrationTest {
 
     }
 
+    @KafkaListener(groupId = "KafkaIntegrationTest", topics = MAIL_BOX)
+    void receiveMail(@Payload UpsMail payload) {
+      log.debug("Received UpsMail: {}", payload);
+      mailBoxCounter.incrementAndGet();
+
+    }
+
   }
 
   @BeforeEach
   public void setUp() {
     testListener.largeTruckCounter.set(0);
     testListener.smallTruckCounter.set(0);
+    testListener.mailBoxCounter.set(0);
 
     registry.getListenerContainers().stream().forEach(container ->
         ContainerTestUtils.waitForAssignment(container,
@@ -112,6 +124,16 @@ class UpsPackageIntegrationTest {
     sendMessage(LARGE_TRUCK, testEvent);
     await().atMost(3, TimeUnit.SECONDS).pollDelay(100, TimeUnit.MILLISECONDS)
         .until(testListener.largeTruckCounter::get, equalTo(1));
+
+
+  }
+
+  @Test
+  void testMailFlow() throws Exception {
+    UpsMail testEvent = UpsMail.builder().mail("Hello from mail success test").build();
+    sendMessage(MAIL_BOX, testEvent);
+    await().atMost(3, TimeUnit.SECONDS).pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(testListener.mailBoxCounter::get, equalTo(1));
 
 
   }

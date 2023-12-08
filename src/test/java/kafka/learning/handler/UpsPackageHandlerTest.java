@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import kafka.learning.model.UpsMail;
 import kafka.learning.model.UpsPackage;
 import kafka.learning.service.UpsPackageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,8 +24,15 @@ class UpsPackageHandlerTest {
   }
 
   @Test
-  void listen_Success() throws Exception {
+  void listenPackage_Success() throws Exception {
     UpsPackage testEvent = UpsPackage.builder().height(5).width(7).length(2).build();
+    handler.listen(testEvent);
+    verify(upsPackageServiceMock, times(1)).process(testEvent);
+  }
+
+  @Test
+  void listenMail_Success() throws Exception {
+    UpsMail testEvent = UpsMail.builder().mail("Hello from mail success test").build();
     handler.listen(testEvent);
     verify(upsPackageServiceMock, times(1)).process(testEvent);
   }

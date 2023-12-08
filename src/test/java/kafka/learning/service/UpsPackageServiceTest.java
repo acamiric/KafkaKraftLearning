@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
+import kafka.learning.model.UpsMail;
 import kafka.learning.model.UpsPackage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,17 @@ class UpsPackageServiceTest {
     service.process(testEvent);
 
     verify(kafkaProducerMock, times(1)).send(eq("small.truck"), any(UpsPackage.class));
+  }
+
+  @Test
+  void process_sendToMailBox_Success() throws Exception {
+    when(kafkaProducerMock.send(anyString(), any(UpsMail.class))).thenReturn(
+        mock(CompletableFuture.class));
+
+    UpsMail testEvent = UpsMail.builder().mail("Hello from mail (service) success test").build();
+    service.process(testEvent);
+
+    verify(kafkaProducerMock, times(1)).send(eq("mail.box"), any(UpsMail.class));
   }
 
   @Test
